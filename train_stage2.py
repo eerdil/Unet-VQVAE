@@ -59,6 +59,7 @@ def parse_args():
     parser.add_argument('--log_every', type=int, default=50)
     parser.add_argument('--wandb_project', type=str, default='unetvqvae-stage2')
     parser.add_argument('--wandb_run_name', type=str, default=None)
+    parser.add_argument('--grad_checkpoint', action='store_true', help='Per-block gradient checkpointing to save memory')
     parser.add_argument('--resume', type=str, default=None)
     # DDP
     parser.add_argument('--local_rank', type=int, default=int(os.environ.get('LOCAL_RANK', 0)))
@@ -142,7 +143,7 @@ def main():
         d_embed=args.d_embed,
     ).to(device)
     ckpt = torch.load(args.stage1_ckpt, map_location='cpu')
-    vae.load_state_dict(ckpt['model'])
+    vae.load_state_dict(ckpt['model'], strict=False)
     vae.eval()
     for p in vae.parameters():
         p.requires_grad_(False)
@@ -182,6 +183,7 @@ def main():
         drop_path_rate=args.drop_path_rate,
         cond_drop_rate=args.cond_drop_rate,
         level_sizes=level_sizes,
+        use_checkpoint=args.grad_checkpoint,
     ).to(device)
 
     if ddp:

@@ -9,6 +9,7 @@ from typing import List, Optional, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.checkpoint import checkpoint as grad_checkpoint
 
 
 # ---- Attention helpers ----
@@ -183,6 +184,7 @@ class UNetVAR(nn.Module):
         drop_path_rate: float = 0.0,
         cond_drop_rate: float = 0.1,
         level_sizes: Optional[List[Tuple[int, int]]] = None,
+        use_checkpoint: bool = False,
     ):
         super().__init__()
         if level_sizes is None:
@@ -196,6 +198,7 @@ class UNetVAR(nn.Module):
         self.cond_drop_rate = cond_drop_rate
         self.K = len(level_sizes)
         self.level_sizes = level_sizes  # coarse to fine
+        self.use_checkpoint = use_checkpoint
 
         # Token counts per level
         self.level_lens = [h * w for h, w in level_sizes]
@@ -331,7 +334,10 @@ class UNetVAR(nn.Module):
         attn_bias = attn_bias.to(dtype)
 
         for blk in self.blocks:
-            x = blk(x, cond=cond, attn_bias=attn_bias)
+            if self.use_checkpoint and self.training:
+                x = grad_checkpoint(blk, x, cond, attn_bias, use_reentrant=False)
+            else:
+                x = blk(x, cond=cond, attn_bias=attn_bias)
 
         return self._get_logits(x, cond)  # (B, L, V)
 
