@@ -1,0 +1,19 @@
+name: GenUnet
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - torch==2.1.2+cu118
+    - torchvision==0.16.2+cu118
+    - --extra-index-url https://download.pytorch.org/whl/cu118
+    - wandb
+    - timm
+    - Pillow
+    - numpy
+    - tqdm
+    - einops
